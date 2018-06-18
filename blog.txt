@@ -24,4 +24,16 @@ Then I added the static HTML site which was extremely straightforwrd.
 
 Then came the Java apps, which were a bit of a problem because they would launch before the database had data, and they did some schema validation on launch. I added the healthcheck command to deal with this, which actually forced me to downgrade to compose version 2.3.
 
-After this was done, and everything was running as my boss had mentioned, I took things to the next step. I wanted a truly isolated environment but I also wanted to allow our applications to send SMTP messages but I wanted them captured by a fake server. Enter fakesmtp. 
+After this was done, and everything was running as my boss had mentioned, I took things to the next step. I wanted a truly isolated environment but I also wanted to allow our applications to send SMTP messages but I wanted them captured by a fake server. Fakesmtp https://hub.docker.com/r/digiplant/fake-smtp/ was the perfect tool for the job. 
+
+Next, I wanted to be able to have our applications send text messages. For mocking a REST server I considered two out of the box solutions, json-server https://github.com/typicode/json-server and mock-server http://www.mock-server.com/mock_server/getting_started.html but neither provided the fine grained control I wanted. 
+
+We send text messages at scale and observe about a 40% response rate. So I wanted our mock RESTful server to be able to simulate this randomness as well as the randomness of the responses and the time to respond from when we sent the message. 
+
+This was just a proof of concept, but it actually went a lot easier than I thought. 
+
+First, I created an nginx reverse proxy server that would route traffic on 80 and 443 to our mock server. I then added a hosts file, with a few of the services we use aliased to the nginx server's IP on our bridge network. Finally, I had the traffic that went to 80 and 443 on the nginx server forwarded to our mock server. 
+
+The project was extremely satisfying, tying together Docker, proxies, restful APIs, devops yielding a highly reusable environment in which we can control expectations, simulate load, and develop locally.
+
+For the full repo, please see here: https://github.com/JonasJSchreiber/local-development-scripts
