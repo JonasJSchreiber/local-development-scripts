@@ -1,0 +1,181 @@
+version: '2.3'
+services:
+  mysql:
+    image: mysql:5.7
+    hostname: mysql
+    networks:
+      test:
+        ipv4_address: 172.21.0.2
+    ports:
+      - 3306:3306
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: local_dev
+    volumes:
+      - ./hosts:/etc/hosts
+      - ./mysql/mysql.cnf:/etc/mysql/conf.d/mysql.cnf
+    healthcheck:
+      test: mysql --user=root --password=password -e "SHOW VARIABLES" >/dev/null 2>&1;
+      timeout: 20s
+      retries: 10
+  phpservice1:
+    build: ./php-service-1/
+    hostname: php-service-1
+    networks:
+      test:
+        ipv4_address: 172.21.0.3
+    ports:
+      - 8082:80
+    volumes:
+      - ./hosts:/etc/hosts
+      - ../php-service-1:/var/www/html/php-service-1
+      - ./tmp/share:/opt/localuser/share
+      - ./tmp/logs/php-service-1:/var/www/html/php-service-1/logs
+    depends_on:
+      mysql:
+        condition: service_healthy
+  phpservice2:
+    build: ./php-service-2/
+    hostname: php-service-2
+    networks:
+      test:
+        ipv4_address: 172.21.0.4
+    ports:
+      - 8081:80
+    volumes:
+      - ./hosts:/etc/hosts
+      - ../php-service-1:/var/www/html/php-service-1
+      - ./tmp/share:/opt/localuser/share
+      - ./tmp/logs/php-service-1:/var/www/html/php-service-1/logs
+    depends_on:
+      mysql:
+        condition: service_healthy
+  flyway:
+    image: boxfuse/flyway
+    hostname: flyway
+    networks:
+      test:
+        ipv4_address: 172.21.0.5
+    command: -url=jdbc:mysql://mysql/local_dev -user=root -password=password migrate
+    volumes:
+      - ./hosts:/etc/hosts
+      - ./flyway/sql:/flyway/sql
+    depends_on:
+      mysql:
+        condition: service_healthy
+  statichtml:
+    build: ./static-html/
+    hostname: static-html
+    networks:
+      test:
+        ipv4_address: 172.21.0.6
+    ports:
+      - 8084:80
+    volumes:
+      - ./hosts:/etc/hosts
+      - ../web_mktg:/usr/local/apache2/htdocs/
+  javaservice1:
+    build: ./java-service-1/
+    hostname: java-service-1
+    networks:
+      test:
+        ipv4_address: 172.21.0.7
+    ports:
+      - 8083:8080
+    volumes:
+      - ./hosts:/etc/hosts
+      - ../java-service-1/target/java-service-1-0.1.0.jar:/opt/localuser/java-service-1/jars/java-service-1-0.1.0.jar
+      - ./tmp/share:/opt/localuser/share
+      - ./tmp/logs/java-service-1:/opt/localuser/java-service-1/logs
+    depends_on:
+      mysql:
+        condition: service_healthy
+  javaservice2:
+    build: ./java-service-2/
+    hostname: java-service-2
+    networks:
+      test:
+        ipv4_address: 172.21.0.8
+    volumes:
+      - ./hosts:/etc/hosts
+      - ../java-service-2//target/java-service-2-0.1.0.jar:opt/localuser/java-service-2/jars/java-service-2-0.1.0.jar
+      - ./tmp/share:/opt/localuser/share
+      - ./tmp/logs/java-service-2:/opt/localuser/java-service-2/logs
+    depends_on:
+      mysql:
+        condition: service_healthy
+  javaservice3:
+    build: ./java-service-3/
+    hostname: java-service-3
+    networks:
+      test:
+        ipv4_address: 172.21.0.9
+    volumes:
+      - ./hosts:/etc/hosts
+      - ../java-service-3/target/java-service-3-0.1.0.jar:/opt/localuser/java-service-3/jars/java-service-3-0.1.0.jar      
+      - ./tmp/share:/opt/localuser/share
+      - ./tmp/logs/java-service-3:/opt/localuser/java-service-3/logs
+    depends_on:
+      mysql:
+        condition: service_healthy
+  javaservice4:
+    build: ./java-service-4/
+    hostname: java-service-4
+    networks:
+      test:
+        ipv4_address: 172.21.0.10
+    volumes:
+      - ./hosts:/etc/hosts
+      - ../java-service-4/target/java-service-4-0.1.0.jar:/opt/localuser/java-service-4/jars/java-service-4-0.1.0.jar
+      - ./tmp/logs/java-service-4:/opt/localuser/java-service-4/logs
+    depends_on:
+      mysql:
+        condition: service_healthy
+  fakesmtp:
+    image: digiplant/fake-smtp
+    hostname: fakesmtp
+    networks:
+      test:
+        ipv4_address: 172.21.0.11
+    ports:
+      - "25:25"
+    volumes:
+      - ./hosts:/etc/hosts
+      - ./tmp/email:/var/mail
+  mockserver:
+    image: maven:3.5.3-jdk-8-alpine 
+    hostname: mock-server
+    networks:
+      test:
+        ipv4_address: 172.21.0.12
+    ports:
+      - 8080:8080
+    working_dir: /usr/src/mymaven mvn clean install
+    entrypoint:
+      - java
+      - -jar
+      - /usr/src/mymaven/target/mock-server-0.1.0.jar
+    volumes:
+      - ./hosts:/etc/hosts
+      - ./mock-server/:/usr/src/mymaven
+  proxyserver:
+    build: ./proxy-server/
+    hostname: proxy-server
+    networks:
+      test:
+        ipv4_address: 172.21.0.13
+    volumes:
+      - ./hosts:/etc/hosts
+      - ./proxy-server/proxy.conf:/etc/nginx/conf.d/default.conf
+      - ./proxy-server/ssl/cert.key:/etc/nginx/cert.key
+      - ./proxy-server/ssl/cert.pem:/etc/nginx/cert.pem
+    ports:
+      - 443:443
+      - 80:80
+
+networks:
+  test:
+    driver: bridge
+    ipam:
+      config:
+      - subnet: 172.21.0.0/20

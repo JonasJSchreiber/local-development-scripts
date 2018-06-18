@@ -1,0 +1,27 @@
+Creating an Isolated Development Environment with Docker
+
+Sometimes unit testing isn't enough. Sometimes even running one of your applications locally isn't enough. 
+
+"Wouldn't it be nice to execute one command and see our entire stack be deployed locally?" That's the question that my boss recently asked me. And it planted a seed in my head that would result in even more than he'd initially intended. 
+
+I'm sure if you have been outside in the last couple years you've heard talk about Docker. "Docker is so great", people rave, "have you tried compose? Have you seen the RUN directive?" 
+
+https://cdn-images-1.medium.com/max/800/1*XyJyNE4XquojVNX0uIHXZA.jpeg
+
+At first I just wanted to pretend I didn't hear since the things that were mentioned seemed unbelievable or like they'd require a ton of work to realize. But then I got some hands on time, and I came to agree with them. It really is great if you put the time in. 
+
+Fast forward 18 months, we now have our entire stack running in containers, with Swarm to handle orchestration. And the experience of migrating our apps gave me the confidence to pull off what my boss asked. 
+
+https://cdn-images-1.medium.com/max/1600/1*IKPNn8NB18EVAqaBPJ3Y4A.jpeg
+
+So our stack is essentially two PHP apps, one static HTML app, four Java apps, and a database. The PHP apps talk to one of the Java apps, and all of the apps aside from the HTML one interact with the database. So that's where we'll start. 
+
+I used the mysql docker image which can be downloaded from DockerHub https://hub.docker.com/_/mysql/ . Then I added Flyway to prime our database on startup. 
+
+Next, I added the two PHP apps, and noticed that if the containers were using host networking they'd both try to bind port 80. So we switched to bridge networking, and this helped things. However, the IP of the mysql instance wasn't static, so I had to ensure they binded predictably. I reran with the two PHP apps, and saw there was no conflict. They were both resolvable on the ports I binded to the container from the host by navigating to localhost:port. 
+
+Then I added the static HTML site which was extremely straightforwrd. 
+
+Then came the Java apps, which were a bit of a problem because they would launch before the database had data, and they did some schema validation on launch. I added the healthcheck command to deal with this, which actually forced me to downgrade to compose version 2.3.
+
+After this was done, and everything was running as my boss had mentioned, I took things to the next step. I wanted a truly isolated environment but I also wanted to allow our applications to send SMTP messages but I wanted them captured by a fake server. Enter fakesmtp. 

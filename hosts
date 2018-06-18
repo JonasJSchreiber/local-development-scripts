@@ -1,0 +1,18 @@
+127.0.0.1       localhost
+::1     localhost ip6-localhost ip6-loopback
+fe00::0 ip6-localnet
+ff00::0 ip6-mcastprefix
+ff02::1 ip6-allnodes
+ff02::2 ip6-allrouters
+172.21.0.2		mysql
+172.21.0.3		php-service-1
+172.21.0.4      php-service-2
+172.21.0.6		static-html
+172.21.0.7		java-service-1
+172.21.0.8		java-service-2
+172.21.0.9		java-service-3
+172.21.0.10		java-service-4
+172.21.0.11		fakesmtp
+172.21.0.12		mock-server
+172.21.0.13		proxy-server api.twilio.com api.sms.voxox.com
+
